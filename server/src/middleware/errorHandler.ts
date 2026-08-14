@@ -47,6 +47,15 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return;
   }
 
+  // MongoDB duplicate-key (unique index) violations — e.g. two staff with
+  // the same email in one school. Surfaced as 409, not a bare 500.
+  if (err instanceof Error && (err as { code?: number }).code === 11000) {
+    const keyPattern = (err as { keyPattern?: Record<string, unknown> }).keyPattern ?? {};
+    const field = Object.keys(keyPattern)[0] ?? 'field';
+    res.status(409).json({ error: `duplicate value for ${field}` });
+    return;
+  }
+
   const message = err instanceof Error ? err.message : 'unknown error';
   logger.error(`unhandled error: ${message}`);
   res.status(500).json({ error: 'internal server error' });

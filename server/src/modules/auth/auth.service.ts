@@ -92,6 +92,9 @@ export async function loginStaff(email: string, password: string): Promise<AuthR
   }
 
   const member = staff[0];
+  if (member.status !== 'active') {
+    throw new UnauthorizedError('account is deactivated — contact your school admin');
+  }
   const passwordOk = await bcrypt.compare(password, member.passwordHash);
   if (!passwordOk) {
     throw new UnauthorizedError('invalid email or password');

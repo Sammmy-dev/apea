@@ -7,6 +7,7 @@ import guardianStudentLinkRoutes from '../modules/guardianStudentLink/guardianSt
 import organizationRoutes from '../modules/organization/organization.routes';
 import pickupEventRoutes from '../modules/pickupEvent/pickupEvent.routes';
 import schoolRoutes from '../modules/school/school.routes';
+import staffRoutes from '../modules/staff/staff.routes';
 import studentRoutes from '../modules/student/student.routes';
 
 const router = Router();
@@ -14,6 +15,7 @@ const router = Router();
 router.use('/auth', authRoutes);
 router.use('/organizations', organizationRoutes);
 router.use('/schools', schoolRoutes);
+router.use('/staff', staffRoutes);
 router.use('/students', studentRoutes);
 router.use('/guardians', guardianRoutes);
 router.use('/guardian-student-links', guardianStudentLinkRoutes);
