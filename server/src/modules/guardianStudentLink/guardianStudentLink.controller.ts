@@ -54,3 +54,9 @@ export async function qr(req: Request, res: Response): Promise<void> {
   }
   res.json(digitalId);
 }
+
+/** Guardian-facing: the calling guardian's own children (dashboard cards). */
+export async function me(req: Request, res: Response): Promise<void> {
+  const links = await guardianStudentLinkService.listMyLinks(req);
+  res.json(links);
+}

@@ -18,5 +18,6 @@ router.get('/', requireRole('admin'), asyncHandler(guardianStudentLinkController
 router.patch('/:linkId/revoke', requireRole('admin'), asyncHandler(guardianStudentLinkController.revoke));
 router.delete('/:linkId', requireRole('admin'), asyncHandler(guardianStudentLinkController.remove));
 router.get('/:linkId/qr', requireRole('guardian'), asyncHandler(guardianStudentLinkController.qr));
+router.get('/me', requireRole('guardian'), asyncHandler(guardianStudentLinkController.me));
 
 export default router;

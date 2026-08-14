@@ -4,6 +4,7 @@ import { ForbiddenError } from '../../middleware/errorHandler';
 import { withTenantScope } from '../../middleware/tenantScope';
 import { GuardianStudentLinkModel } from './guardianStudentLink.model';
 import { GuardianModel } from '../guardian/guardian.model';
+import { SchoolModel } from '../school/school.model';
 import { StudentModel } from '../student/student.model';
 import {
   generateFallbackCode,
@@ -103,6 +104,46 @@ export async function deleteLink(req: Request, linkId: string) {
     return null;
   }
   return GuardianStudentLinkModel.findByIdAndDelete(linkId);
+}
+
+/**
+ * Lists the calling guardian's OWN active links with student + school
+ * details — the data source for the guardian dashboard's child cards.
+ * Scoped purely by req.user.id, so no cross-tenant surface exists.
+ */
+export async function listMyLinks(req: Request) {
+  const links = await GuardianStudentLinkModel.find({
+    guardianId: req.user!.id,
+    status: 'active',
+  });
+
+  if (links.length === 0) return [];
+
+  const studentIds = links.map((l) => l.studentId);
+  const students = await StudentModel.find({ _id: { $in: studentIds } });
+  const schoolIds = [...new Set(students.map((s) => s.schoolId.toString()))];
+  const schools = await SchoolModel.find({ _id: { $in: schoolIds } });
+  const schoolNames = new Map(schools.map((s) => [s._id.toString(), s.name]));
+  const studentMap = new Map(students.map((s) => [s._id.toString(), s]));
+
+  return links.map((link) => {
+    const student = studentMap.get(link.studentId.toString());
+    return {
+      linkId: link._id.toString(),
+      relationship: link.relationship,
+      isPrimary: link.isPrimary,
+      student: student
+        ? {
+            id: student._id.toString(),
+            firstName: student.firstName,
+            lastName: student.lastName,
+            classGrade: student.classGrade ?? null,
+            photoUrl: student.photoUrl ?? null,
+          }
+        : null,
+      schoolName: student ? (schoolNames.get(student.schoolId.toString()) ?? null) : null,
+    };
+  });
 }
 
 /**
