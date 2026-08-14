@@ -1,9 +1,16 @@
 import type { Request } from 'express';
 import { HttpError } from '../../middleware/errorHandler';
+import { ForbiddenError } from '../../middleware/errorHandler';
 import { withTenantScope } from '../../middleware/tenantScope';
 import { GuardianStudentLinkModel } from './guardianStudentLink.model';
 import { GuardianModel } from '../guardian/guardian.model';
 import { StudentModel } from '../student/student.model';
+import {
+  generateFallbackCode,
+  hashFallbackCode,
+  issueQrTokenForLink,
+  signQrToken,
+} from '../authorizationLink/qrToken.service';
 
 /**
  * GuardianStudentLink has no organizationId/schoolId field (see the tenant
@@ -12,7 +19,11 @@ import { StudentModel } from '../student/student.model';
  * the caller's school before any link record is read or written.
  */
 
-/** Links a guardian to a student with a relationship label. Admin-only route. */
+/**
+ * Links a guardian to a student with a relationship label. Admin-only route.
+ * The guardian's own pickup digital ID (QR token + 6-digit fallback code)
+ * is issued immediately: hash stored, plaintext returned once.
+ */
 export async function linkGuardianToStudent(
   req: Request,
   input: { guardianId: string; studentId: string; relationship: string; isPrimary: boolean },
@@ -35,11 +46,13 @@ export async function linkGuardianToStudent(
     throw new HttpError(400, 'this guardian is already linked to this student');
   }
 
+  const fallbackCode = generateFallbackCode();
   const link = await GuardianStudentLinkModel.create({
     guardianId: input.guardianId,
     studentId: input.studentId,
     relationship: input.relationship,
     isPrimary: input.isPrimary,
+    fallbackCodeHash: hashFallbackCode(fallbackCode),
   });
 
   // A student has at most one primary guardian.
@@ -50,7 +63,7 @@ export async function linkGuardianToStudent(
     );
   }
 
-  return link;
+  return { link, fallbackCode };
 }
 
 /** Lists links filtered by studentId and/or guardianId; refs are verified in-tenant first. */
@@ -90,4 +103,38 @@ export async function deleteLink(req: Request, linkId: string) {
     return null;
   }
   return GuardianStudentLinkModel.findByIdAndDelete(linkId);
+}
+
+/**
+ * Guardian's own pickup digital ID: signed QR token (standing → rolling
+ * 15-min expiry) + freshly rotated 6-digit fallback code. Only the link's
+ * guardian can view it (a guardian presents this to verify they may pick up
+ * their own child — verified via the GuardianStudentLink directly, with no
+ * AuthorizationLink involved).
+ */
+export async function getGuardianDigitalId(req: Request, linkId: string) {
+  const link = await GuardianStudentLinkModel.findById(linkId);
+  if (!link) {
+    return null;
+  }
+  if (link.guardianId.toString() !== req.user!.id.toString()) {
+    throw new ForbiddenError('you can only view your own pickup digital ID');
+  }
+  if (link.status !== 'active') {
+    throw new HttpError(400, `link is ${link.status}`);
+  }
+
+  const payload = issueQrTokenForLink({
+    _id: link._id,
+    studentId: link.studentId,
+    authorizedPersonId: link.guardianId,
+    type: 'standing',
+    validUntil: undefined,
+  });
+  const qrToken = signQrToken(payload);
+  const fallbackCode = generateFallbackCode();
+  link.fallbackCodeHash = hashFallbackCode(fallbackCode);
+  await link.save();
+
+  return { qrToken, fallbackCode, expiresAt: new Date(payload.exp) };
 }

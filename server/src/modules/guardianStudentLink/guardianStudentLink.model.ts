@@ -12,6 +12,8 @@ export interface GuardianStudentLink {
   revokedByStaffId?: Types.ObjectId;
   revokedAt?: Date;
   revocationReason?: string;
+  /** SHA-256 of the guardian's current 6-digit pickup fallback code. */
+  fallbackCodeHash?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,8 +43,17 @@ const guardianStudentLinkSchema = new Schema<GuardianStudentLink>(
     revokedByStaffId: { type: Schema.Types.ObjectId, ref: 'Staff', default: null },
     revokedAt: { type: Date, default: null },
     revocationReason: { type: String, default: null },
+    fallbackCodeHash: { type: String, select: false, default: null },
   },
-  { timestamps: true, collection: 'guardianStudentLinks' },
+  {
+    timestamps: true,
+    collection: 'guardianStudentLinks',
+    toJSON: {
+      transform: (_doc: unknown, ret: Record<string, unknown>) => {
+        delete ret.fallbackCodeHash;
+      },
+    },
+  },
 );
 
 guardianStudentLinkSchema.index({ guardianId: 1, status: 1 });

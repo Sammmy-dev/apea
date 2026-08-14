@@ -13,6 +13,8 @@ export interface AuthorizationLink {
   validUntil?: Date;
   status: AuthorizationLinkStatus;
   qrTokenHash: string;
+  /** SHA-256 of the current 6-digit fallback code (plaintext is never stored). */
+  fallbackCodeHash?: string;
   revokedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -47,10 +49,20 @@ const authorizationLinkSchema = new Schema<AuthorizationLink>(
       default: 'active',
       index: true,
     },
-    qrTokenHash: { type: String, required: true },
+    qrTokenHash: { type: String, required: true, select: false },
+    fallbackCodeHash: { type: String, select: false, default: null },
     revokedAt: { type: Date, default: null },
   },
-  { timestamps: true, collection: 'authorizationLinks' },
+  {
+    timestamps: true,
+    collection: 'authorizationLinks',
+    toJSON: {
+      transform: (_doc: unknown, ret: Record<string, unknown>) => {
+        delete ret.qrTokenHash;
+        delete ret.fallbackCodeHash;
+      },
+    },
+  },
 );
 
 authorizationLinkSchema.index({ studentId: 1, status: 1 });

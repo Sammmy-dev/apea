@@ -36,7 +36,16 @@ const guardianSchema = new Schema<Guardian>(
     claimTokenExpiresAt: { type: Date, default: null },
     photoUrl: { type: String },
   },
-  { timestamps: true, collection: 'guardians' },
+  {
+    timestamps: true,
+    collection: 'guardians',
+    toJSON: {
+      transform: (_doc: unknown, ret: Record<string, unknown>) => {
+        delete ret.passwordHash;
+        delete ret.claimTokenHash;
+      },
+    },
+  },
 );
 
 guardianSchema.index({ organizationId: 1, email: 1 }, { unique: true });

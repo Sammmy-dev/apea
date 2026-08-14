@@ -5,8 +5,13 @@ export type PickupStatus = 'approved' | 'denied';
 
 export interface PickupEvent {
   _id: Types.ObjectId;
-  studentId: Types.ObjectId;
-  authorizedPersonId: Types.ObjectId;
+  /**
+   * Nullable only for DENIED attempts where no identity could be resolved
+   * (e.g. garbage QR token / unknown code) — such attempts are still logged
+   * for the audit trail (PRD §7.5: every attempt is logged).
+   */
+  studentId?: Types.ObjectId;
+  authorizedPersonId?: Types.ObjectId;
   authorizationLinkId?: Types.ObjectId;
   scannedByStaffId: Types.ObjectId;
   schoolId: Types.ObjectId;
@@ -23,13 +28,11 @@ const pickupEventSchema = new Schema<PickupEvent>(
     studentId: {
       type: Schema.Types.ObjectId,
       ref: 'Student',
-      required: true,
       index: true,
     },
     authorizedPersonId: {
       type: Schema.Types.ObjectId,
       ref: 'AuthorizedPerson',
-      required: true,
       index: true,
     },
     authorizationLinkId: {

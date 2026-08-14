@@ -28,7 +28,15 @@ const staffSchema = new Schema<Staff>(
     role: { type: String, enum: ['admin', 'guard'], default: 'guard' },
     passwordHash: { type: String, required: true },
   },
-  { timestamps: true, collection: 'staff' },
+  {
+    timestamps: true,
+    collection: 'staff',
+    toJSON: {
+      transform: (_doc: unknown, ret: Record<string, unknown>) => {
+        delete ret.passwordHash;
+      },
+    },
+  },
 );
 
 staffSchema.index({ schoolId: 1, email: 1 }, { unique: true });

@@ -9,4 +9,5 @@ export const env = {
   // TODO: require JWT_SECRET in production instead of defaulting.
   jwtSecret: process.env.JWT_SECRET ?? 'dev-secret-do-not-use-in-production',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
+  qrTokenSecret: process.env.QR_TOKEN_SECRET ?? process.env.JWT_SECRET ?? 'dev-secret-do-not-use-in-production',
 };
