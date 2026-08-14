@@ -12,7 +12,7 @@ async function start(): Promise<void> {
       logger.info(`listening on http://localhost:${env.port} (${env.nodeEnv})`);
     });
   } catch (err) {
-    logger.error('failed to start server: %s', err);
+    logger.error(`failed to start server: ${err}`);
     process.exit(1);
   }
 }

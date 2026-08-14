@@ -1,9 +1,11 @@
 import cors from 'cors';
-import express, { type Express, type Request, type Response } from 'express';
+import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { env } from './config/env';
 import { logger } from './config/logger';
+import { errorHandler } from './middleware/errorHandler';
+import routes from './routes';
 
-function requestLogger(req: Request, res: Response, next: express.NextFunction): void {
+function requestLogger(req: Request, res: Response, next: NextFunction): void {
   const start = Date.now();
   res.on('finish', () => {
     logger.http(`${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms`);
@@ -21,6 +23,11 @@ export function createApp(): Express {
   app.get('/health', (_req: Request, res: Response) => {
     res.status(200).json({ status: 'ok', uptime: process.uptime() });
   });
+
+  app.use(routes);
+
+  // Must be last: terminal error handler for anything next(err)'d upstream.
+  app.use(errorHandler);
 
   return app;
 }
