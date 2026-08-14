@@ -1,12 +1,19 @@
 import { Schema, model, type Types } from 'mongoose';
 
+export type GuardianStatus = 'invited' | 'active';
+
 export interface Guardian {
   _id: Types.ObjectId;
   organizationId: Types.ObjectId;
   name: string;
   email: string;
   phone: string;
-  passwordHash: string;
+  /** Set on activation; absent while the account is still invited. */
+  passwordHash?: string;
+  status: GuardianStatus;
+  /** SHA-256 of the plaintext claim token (the plaintext is never stored). */
+  claimTokenHash?: string;
+  claimTokenExpiresAt?: Date;
   photoUrl?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -23,7 +30,10 @@ const guardianSchema = new Schema<Guardian>(
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, trim: true, lowercase: true },
     phone: { type: String, required: true, trim: true },
-    passwordHash: { type: String, required: true },
+    passwordHash: { type: String, select: false },
+    status: { type: String, enum: ['invited', 'active'], default: 'invited' },
+    claimTokenHash: { type: String, select: false },
+    claimTokenExpiresAt: { type: Date, default: null },
     photoUrl: { type: String },
   },
   { timestamps: true, collection: 'guardians' },

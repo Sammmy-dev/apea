@@ -40,7 +40,7 @@ function signToken(payload: AuthTokenPayload): string {
  */
 export async function loginGuardian(email: string, password: string): Promise<AuthResult> {
   const normalizedEmail = email.trim().toLowerCase();
-  const guardians = await GuardianModel.find({ email: normalizedEmail });
+  const guardians = await GuardianModel.find({ email: normalizedEmail }).select('+passwordHash');
 
   if (guardians.length === 0) {
     throw new UnauthorizedError('invalid email or password');
@@ -50,6 +50,9 @@ export async function loginGuardian(email: string, password: string): Promise<Au
   }
 
   const guardian = guardians[0];
+  if (!guardian.passwordHash || guardian.status !== 'active') {
+    throw new UnauthorizedError('account not activated — use your claim invitation');
+  }
   const passwordOk = await bcrypt.compare(password, guardian.passwordHash);
   if (!passwordOk) {
     throw new UnauthorizedError('invalid email or password');
