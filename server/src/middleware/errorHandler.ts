@@ -42,6 +42,11 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return;
   }
 
+  if (err instanceof mongoose.Error.CastError) {
+    res.status(400).json({ error: `invalid value for ${err.path}` });
+    return;
+  }
+
   const message = err instanceof Error ? err.message : 'unknown error';
   logger.error(`unhandled error: ${message}`);
   res.status(500).json({ error: 'internal server error' });
